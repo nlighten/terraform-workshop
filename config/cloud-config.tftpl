@@ -1,0 +1,39 @@
+#cloud-config:
+package_update: true
+package_upgrade: true
+packages:
+  - nginx
+
+write_files:
+  - path: /var/www/workshop/index.html.template
+    content: |
+      <!doctype html>
+      <html>
+      <head>
+          <meta charset="utf-8">
+          <title>Hello, ${workshop_user}!</title>
+      </head>
+      <body>
+          <h1>Hello, ${workshop_user}!</h1>
+          <p>We have just deployed this Nginx web server on Azure with Terraform!</p>
+          <p>This is host $${HOSTNAME}</p>
+      </body>
+      </html>
+
+  - path: /etc/nginx/sites-enabled/workshop
+    content: |
+      server {
+          listen 8080;     
+          server_name ${domain_label}.westeurope.cloudapp.azure.com;
+          root /var/www/workshop;
+          index index.html;
+          location / {
+              try_files $uri $uri/ =404;
+          }
+      }
+
+runcmd:
+  - export HOSTNAME=$(hostname)
+  - rm -f /etc/nginx/sites-enables/default
+  - envsubst < /var/www/workshop/index.html.template > /var/www/workshop/index.html
+  - service nginx restart
